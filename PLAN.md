@@ -5,7 +5,7 @@ A new website (the project folder is currently empty) where users pick a cube si
 - **Platform:** a website that works in desktop and phone browsers
 - **Turning layers:** keyboard shortcuts on desktop, **on-screen move buttons on phones and tablets**
 - **Mouse (desktop):** left-drag across the cube turns the layer under the pointer. Hold **both** buttons and drag to spin the whole cube freely in any direction (no stops at the top or bottom, with a little momentum on a flick). The scroll wheel zooms.
-- **Viewing on phones:** drag with one finger to spin the cube freely, pinch to zoom
+- **Touch (phones/tablets), mirroring the mouse:** swipe across the cube with one finger to turn that layer. Drag with two fingers to spin the cube freely, and pinch to zoom. The on-screen move buttons remain as an alternative.
 - **Timer:** starts on the first move after a scramble, stops automatically when the cube is solved
 - **Extras:** saved best and recent times for each size, the scramble moves shown as text, Undo and Reset
 
@@ -37,6 +37,8 @@ src/styles.css
 **Rendering.** For each move, put the affected cubie meshes in a temporary pivot `Group`, tween its rotation (about 120 ms, quicker when moves are queued), then commit the transforms back and snap to the grid to avoid float drift. The view reads from the model, so animation never controls the cube's state.
 
 **Mouse turning (`src/input/mouse.js`).** On left-button press, `CubeView.pick()` finds the sticker under the pointer by intersecting the view ray with the cube's resting box, so it stays accurate even mid-animation. After 12px of drag, the drag is matched to whichever of that face's two in-plane axes it runs along on screen (`CubeView.screenDirection()`). The layer then turns about the third axis, w = normal × drag axis. `fromLayerTurn()` in `moves.js` names the result (e.g. `R`, `2R`), so undo and history work the same as for key presses. When both buttons are down, the gesture becomes a spin (`CubeView.spin()`), and it stays a spin until every button is released. The browser's right-click menu is disabled on the canvas.
+
+**Touch gestures (`src/input/mouse.js`).** A single finger works like a left-drag: it picks the sticker, then after 16px and at least 70ms, so a second finger has time to land, it commits a turn using the same `turnFromDrag()`. Once a second finger is down, the gesture becomes a spin driven by the two fingers' midpoint, and it stays a spin. The finger left behind after lifting one can't start a turn. Pinch zoom is still handled by OrbitControls (`touches.TWO = DOLLY_PAN`, with pan disabled).
 
 **Free spin.** Spinning rotates the cube itself (`cubeRoot.quaternion`) about the screen's vertical and horizontal axes, trackball style, rather than orbiting the camera. That way there are no pole limits and the cube turns freely through 360° in every direction. A quick flick coasts to a stop, and grabbing the cube stops it. One-finger touch drags use the same spin. OrbitControls is now only used for wheel and pinch zoom. A headlight attached to the camera keeps whichever face is towards the viewer well lit.
 

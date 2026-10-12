@@ -9,6 +9,7 @@ export function createMovePad(root, { onMove }) {
   let wide = false;
 
   root.innerHTML = `
+    <p class="pad-hint">Swipe the cube with one finger to turn a layer · two fingers to spin · pinch to zoom</p>
     <div class="pad-layers" role="group" aria-label="Layer"></div>
     <div class="pad-grid"></div>`;
   const layersEl = root.querySelector('.pad-layers');

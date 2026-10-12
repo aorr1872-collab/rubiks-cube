@@ -1,19 +1,23 @@
-// Pointer controls on the cube canvas.
+// Pointer controls on the cube canvas. Mouse and touch mirror each other:
 //   Mouse: left button, drag across the cube   turn the layer under the pointer
 //   Mouse: left + right buttons held, drag     spin the whole cube freely (view only)
-//   Touch: one finger drag                     spin the whole cube freely
-// Pressing the second mouse button part-way through a drag switches it to a spin.
-// Wheel and pinch zoom are left to OrbitControls.
+//   Touch: one finger, swipe across the cube   turn the layer under the finger
+//   Touch: two fingers, drag together          spin the whole cube freely
+// Pressing a second button / putting down a second finger part-way through switches to a spin,
+// which lasts until every button / finger is lifted. Wheel and pinch zoom are left to OrbitControls.
 
 import { fromLayerTurn } from '../cube/moves.js';
 
 const DRAG_THRESHOLD = 12; // pixels before a left-drag commits to a turn
+const TOUCH_THRESHOLD = 16; // fingers are less precise than a mouse
+const TOUCH_SETTLE_MS = 70; // let a second finger land before a one-finger swipe counts as a turn
 const LEFT = 1;
 const RIGHT = 2;
 
 export function attachMouse(view, el, { getSize, onMove }) {
-  let gesture = null;
-  const touches = new Map(); // pointerId → last position, for one-finger spin
+  let gesture = null; // mouse gesture
+  const touches = new Map(); // pointerId → current position
+  let touch = null; // touch gesture: { mode: 'turn' | 'spin' | 'spent', ... }
 
   // Right-clicks are part of the spin chord, never a context menu.
   el.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -21,9 +25,7 @@ export function attachMouse(view, el, { getSize, onMove }) {
   el.addEventListener('pointerdown', (e) => {
     view.stopSpin();
     if (e.pointerType === 'touch') {
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      // A second finger means pinch-zoom: stop spinning.
-      if (touches.size > 1) view.endSpin();
+      touchDown(e);
       return;
     }
     el.setPointerCapture(e.pointerId);
@@ -41,10 +43,7 @@ export function attachMouse(view, el, { getSize, onMove }) {
 
   el.addEventListener('pointermove', (e) => {
     if (e.pointerType === 'touch') {
-      const last = touches.get(e.pointerId);
-      if (!last) return;
-      if (touches.size === 1) view.spin(e.clientX - last.x, e.clientY - last.y);
-      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      touchMove(e);
       return;
     }
     if (!gesture) return;
@@ -70,8 +69,7 @@ export function attachMouse(view, el, { getSize, onMove }) {
 
   const end = (e) => {
     if (e.pointerType === 'touch') {
-      if (touches.size === 1 && touches.has(e.pointerId)) view.endSpin();
-      touches.delete(e.pointerId);
+      touchUp(e);
       return;
     }
     if (e.buttons !== 0 || !gesture) return;
@@ -88,6 +86,64 @@ export function attachMouse(view, el, { getSize, onMove }) {
       gesture.spinning = true;
       el.classList.add('is-spinning');
     }
+  }
+
+  // ---------- touch ----------
+
+  function centroid() {
+    let x = 0;
+    let y = 0;
+    for (const t of touches.values()) {
+      x += t.x;
+      y += t.y;
+    }
+    return { x: x / touches.size, y: y / touches.size };
+  }
+
+  function touchDown(e) {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size === 1) {
+      touch = {
+        mode: 'turn',
+        done: false,
+        hit: view.pick(e.clientX, e.clientY),
+        startX: e.clientX,
+        startY: e.clientY,
+        at: performance.now(),
+      };
+    } else if (touches.size === 2) {
+      // Second finger: this gesture is now a spin (unless a turn already happened).
+      touch = { mode: 'spin', last: centroid() };
+    }
+  }
+
+  function touchMove(e) {
+    if (!touches.has(e.pointerId) || !touch) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (touch.mode === 'spin' && touches.size === 2) {
+      const c = centroid();
+      view.spin(c.x - touch.last.x, c.y - touch.last.y);
+      touch.last = c;
+    } else if (touch.mode === 'turn' && touches.size === 1 && touch.hit && !touch.done) {
+      const mx = e.clientX - touch.startX;
+      const my = e.clientY - touch.startY;
+      if (Math.hypot(mx, my) >= TOUCH_THRESHOLD && performance.now() - touch.at >= TOUCH_SETTLE_MS) {
+        touch.done = true;
+        const mv = turnFromDrag(view, getSize(), touch.hit, mx, my);
+        if (mv) onMove(mv);
+      }
+    }
+  }
+
+  function touchUp(e) {
+    if (!touches.delete(e.pointerId)) return;
+    if (touch?.mode === 'spin' && touches.size < 2) {
+      view.endSpin();
+      // The finger left behind shouldn't suddenly start turning layers.
+      touch = { mode: 'spent' };
+    }
+    if (touches.size === 0) touch = null;
   }
 }
 
