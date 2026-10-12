@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0e1014" />
+    <title>Cube Timer</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Crect x='1' y='1' width='8' height='8' rx='2' fill='%23d62828'/%3E%3Crect x='11' y='1' width='8' height='8' rx='2' fill='%23f4f4f0'/%3E%3Crect x='21' y='1' width='8' height='8' rx='2' fill='%2314a44d'/%3E%3Crect x='1' y='11' width='8' height='8' rx='2' fill='%23ffd500'/%3E%3Crect x='11' y='11' width='8' height='8' rx='2' fill='%231e5bd8'/%3E%3Crect x='21' y='11' width='8' height='8' rx='2' fill='%23ff7b1c'/%3E%3Crect x='1' y='21' width='8' height='8' rx='2' fill='%2314a44d'/%3E%3Crect x='11' y='21' width='8' height='8' rx='2' fill='%23d62828'/%3E%3Crect x='21' y='21' width='8' height='8' rx='2' fill='%23f4f4f0'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
+    <header class="topbar">
+      <h1 class="brand"><span class="brand-mark" aria-hidden="true"></span>Cube Timer</h1>
+      <nav class="sizes" id="sizes" aria-label="Cube size"></nav>
+      <button type="button" class="icon-btn" id="help-btn" aria-label="Controls help" title="Controls (?)">?</button>
+    </header>
+
+    <main class="layout">
+      <section class="stage" aria-label="Cube">
+        <div class="timer-wrap">
+          <div class="timer" id="timer" aria-live="off">0.00</div>
+          <div class="status" id="status"></div>
+        </div>
+        <div class="canvas" id="canvas"></div>
+        <div class="prefix" id="prefix" hidden></div>
+        <div class="result" id="result" role="status" hidden>
+          <div class="result-title">Solved!</div>
+          <div class="result-time" id="result-time">0.00</div>
+          <div class="result-pb" id="result-pb"></div>
+          <div class="result-sub" id="result-sub"></div>
+          <div class="result-details" id="result-details"></div>
+          <div class="result-actions">
+            <button type="button" class="btn btn-primary" id="result-again">Scramble again</button>
+            <button type="button" class="btn" id="result-close">Close</button>
+          </div>
+        </div>
+        <button type="button" class="ghost-btn reset-view" id="reset-view">Reset view</button>
+      </section>
+
+      <div class="movepad" id="movepad" aria-label="Move buttons"></div>
+
+      <aside class="panel">
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="scramble-btn">Scramble</button>
+          <button type="button" class="btn" id="undo-btn" disabled>Undo</button>
+          <button type="button" class="btn" id="reset-btn">Reset</button>
+        </div>
+
+        <section class="card">
+          <h2 class="card-title">Scramble</h2>
+          <p class="scramble-text" id="scramble-text">Press Scramble to mix up the cube.</p>
+        </section>
+
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title" id="stats-title">3×3 times</h2>
+            <button type="button" class="link-btn" id="clear-btn">Clear</button>
+          </div>
+          <dl class="stats">
+            <div><dt>Best</dt><dd id="stat-best">—</dd></div>
+            <div><dt>Avg of 5</dt><dd id="stat-ao5">—</dd></div>
+            <div><dt>Solves</dt><dd id="stat-count">0</dd></div>
+          </dl>
+          <ol class="recent" id="recent"></ol>
+        </section>
+      </aside>
+    </main>
+
+    <dialog class="help" id="help">
+      <h2>Controls</h2>
+      <p class="help-intro">Use the mouse, the keyboard, or both.</p>
+      <table>
+        <tbody>
+          <tr><td>Left-drag on the cube</td><td>Turn the layer under the pointer, in the direction you drag</td></tr>
+          <tr><td>Hold both buttons + drag</td><td>Spin the whole cube to look around</td></tr>
+          <tr><td>Scroll wheel</td><td>Zoom in and out</td></tr>
+          <tr><td><kbd>U</kbd> <kbd>D</kbd> <kbd>L</kbd> <kbd>R</kbd> <kbd>F</kbd> <kbd>B</kbd></td><td>Turn that face clockwise</td></tr>
+          <tr><td><kbd>Shift</kbd> + face</td><td>Turn anticlockwise (prime)</td></tr>
+          <tr><td><kbd>2</kbd> then <kbd>R</kbd></td><td>Inner layer: the 2nd layer from the right</td></tr>
+          <tr><td><kbd>W</kbd> then <kbd>R</kbd></td><td>Wide turn: outer two layers (Rw)</td></tr>
+          <tr><td><kbd>3</kbd> <kbd>W</kbd> <kbd>R</kbd></td><td>Outer three layers (3Rw)</td></tr>
+          <tr><td><kbd>M</kbd> <kbd>E</kbd> <kbd>S</kbd></td><td>Middle slices (3×3 and 5×5)</td></tr>
+          <tr><td><kbd>X</kbd> <kbd>Y</kbd> <kbd>Z</kbd></td><td>Rotate the whole cube (does not start the timer)</td></tr>
+          <tr><td><kbd>Space</kbd></td><td>Scramble</td></tr>
+          <tr><td><kbd>Ctrl</kbd> + <kbd>Z</kbd></td><td>Undo last move</td></tr>
+          <tr><td><kbd>Esc</kbd></td><td>Reset to solved</td></tr>
+        </tbody>
+      </table>
+      <p class="help-intro">The timer starts on your first turn after scrambling and stops when the cube is solved. On phones, use the move buttons below the cube and drag with a finger to look around.</p>
+      <form method="dialog"><button class="btn btn-primary">Got it</button></form>
+    </dialog>
+
+    <canvas class="confetti" id="confetti" aria-hidden="true"></canvas>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
